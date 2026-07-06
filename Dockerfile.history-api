@@ -1,0 +1,6 @@
+FROM python:3.10-slim
+WORKDIR /app
+COPY requirements-history-api.txt .
+RUN pip install --no-cache-dir -r requirements-history-api.txt
+COPY history_api.py .
+CMD ["uvicorn", "history_api:app", "--host", "0.0.0.0", "--port", "8000"]
