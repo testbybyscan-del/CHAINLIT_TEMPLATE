@@ -1,0 +1,11 @@
+chainlit>=1.0.0
+aiohttp>=3.8.0
+python-dotenv>=1.0.0
+pypdf>=3.0.0
+python-docx>=0.8.11
+Pillow>=9.0.0
+pytesseract>=0.3.10
+pdf2image>=1.16.0
+asyncpg
+# обновление 4
+requests>=2.31.0
