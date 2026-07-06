@@ -1,0 +1,162 @@
+# docker-compose.yml для Chainlit-проекта (версия 2.0)
+# Используется как шаблон для деплоя новых версий.
+# Все настройки, которые должны различаться между версиями, вынесены в .env.
+
+services:
+  # ========== PostgreSQL с расширением pgvector ==========
+  db:
+    image: pgvector/pgvector:pg16
+    restart: always
+    environment:
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-strong_password_here}
+      POSTGRES_DB: chainlit_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_user -d chainlit_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Том postgres_data создаётся с уникальным именем для каждой версии (см. внизу)
+
+  # ========== Ollama (сервер LLM) ==========
+  ollama:
+    image: ollama/ollama:latest
+    restart: always
+    environment:
+      OLLAMA_HOST: 0.0.0.0
+    volumes:
+      # Общая папка для моделей на хосте – используется всеми версиями, экономит место
+      - /home/bybyscan/dev/models:/root/.ollama/models
+      # Внутренний том для конфигов и кеша – уникальный для каждой версии
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]   # используем GPU, если доступна
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ========== Инициализация моделей Ollama (запускается один раз) ==========
+  ollama-init:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    volumes:
+      - ollama_data:/root/.ollama   # тот же том, что у основного ollama
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: /bin/sh
+    command: >
+      -c "
+        echo 'Загрузка модели llava:7b...';
+        ollama pull llava:7b;
+        echo 'Загрузка основной модели saiga-llama3-8b...';
+        ollama pull akdengi/saiga-llama3-8b;
+        echo 'Готово';
+        exit 0
+      "
+    restart: "no"   # выполняется один раз при первом запуске
+
+  # ========== Инициализация базы данных (Prisma migrate) ==========
+  db-init:
+    image: node:18-alpine
+    working_dir: /app
+    volumes:
+      - ./chainlit-datalayer:/app   # папка с миграциями Prisma
+    environment:
+      DATABASE_URL: postgresql://app_user:${POSTGRES_PASSWORD:-strong_password_here}@db:5432/chainlit_db
+    command: sh -c "npm install && npx prisma migrate deploy"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  # ========== History API (для сохранения истории чатов) ==========
+  history-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.history-api
+    restart: always
+    environment:
+      DATABASE_URL: postgresql://app_user:${POSTGRES_PASSWORD:-strong_password_here}@db:5432/chainlit_db
+    depends_on:
+      db:
+        condition: service_healthy
+    # Имя образа определяется автоматически при сборке, не нужно задавать image:
+
+  # ========== Основное приложение Chainlit ==========
+  chainlit:
+    build: .   # собираем образ из Dockerfile в текущей папке
+    # ВАЖНО: Убрана строка image: chainlit-app:... чтобы не пытаться скачивать образ с Docker Hub.
+    # Образ будет собран локально и использован.
+    restart: always
+    expose:
+      - "8000"   # внутренний порт, не публикуется наружу (проксируется через nginx)
+    volumes:
+      - ./.chainlit/config.toml:/app/.chainlit/config.toml
+      - ./.chainlit/translations/ru.json:/app/.chainlit/translations/ru.json
+      - ./uploads:/app/uploads
+      - ./app.py:/app/app.py
+      - ./modules:/app/modules
+      - ./public:/app/public
+    env_file:
+      - .env   # все переменные окружения загружаются из .env
+    environment:
+      LOG_LEVEL: INFO
+      PYTHONUNBUFFERED: 1
+      DATABASE_URL: postgresql://app_user:${POSTGRES_PASSWORD:-strong_password_here}@db:5432/chainlit_db
+      OLLAMA_API_URL: http://ollama:11434/api/chat
+      OLLAMA_GENERATE_URL: http://ollama:11434/api/generate
+      MULTIMODAL_IMAGE_MODEL: llava:7b
+      CHAINLIT_AUTH_SECRET: ${CHAINLIT_AUTH_SECRET:-change_me}
+      CHAINLIT_STORAGE_DIR: /app/uploads
+      # Используем переменную из .env; если не задана – подставляем порт 9090 (стандартный для audio-transcriber-api)
+      AUDIO_TRANSCRIBER_API_URL: ${AUDIO_TRANSCRIBER_API_URL:-http://host.docker.internal:9090/api/v1/transcribe}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # позволяет контейнеру обращаться к хосту
+    command: chainlit run app.py --host 0.0.0.0 --port 8000
+    depends_on:
+      db:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+      ollama:
+        condition: service_healthy
+      ollama-init:
+        condition: service_completed_successfully
+
+  # ========== Nginx (обратный прокси, HTTPS) ==========
+  nginx:
+    image: nginx:alpine
+    restart: always
+    ports:
+      - "${NGINX_PORT:-443}:443"   # внешний порт берётся из .env, по умолчанию 443
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro   # сертификаты для HTTPS
+    depends_on:
+      - chainlit
+      - history-api
+
+# ========== Тома ==========
+volumes:
+  # Том для PostgreSQL – имя формируется из переменной PROJECT_NAME, чтобы каждый проект имел свои данные
+  postgres_data:
+    name: ${PROJECT_NAME:-chainlit-dev}-postgres-data
+
+  # Том для Ollama – также уникальный для каждой версии
+  ollama_data:
+    name: ${PROJECT_NAME:-chainlit-dev}-ollama-data
+
+# Пояснение:
+# - Каждая версия проекта имеет свой набор томов, что позволяет одновременно запускать несколько версий.
+# - Образ chainlit собирается локально, поэтому не требуется указывать image: – это исключает ошибку pull access denied.
+# - Порт nginx настраивается через .env, поэтому одна и та же конфигурация может работать на разных портах.
+# - Модели ollama хранятся в общей папке на хосте, чтобы не скачивать их заново для каждой версии.
