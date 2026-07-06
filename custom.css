@@ -1,0 +1,150 @@
+/* public/custom.css */
+/* Chainlit UI Customizations */
+
+/* ------------------------------------------------------------
+   1. Hide Readme button (reliable, CSS-only)
+   ------------------------------------------------------------ */
+#readme-button,
+button[title="Readme"],
+button[aria-label="Readme"] {
+    display: none !important;
+}
+
+/* ------------------------------------------------------------
+   2. HIDE CHAINLIT LOGO (безопасно, не трогает аватар ассистента)
+   ------------------------------------------------------------ */
+/* Скрываем только сам логотип по его уникальному классу */
+.logo.w-\[150px\] {
+    display: none !important;
+}
+
+/* Скрываем по атрибуту alt (обычно логотип имеет alt="logo") */
+[alt="logo"] {
+    display: none !important;
+}
+
+/* При необходимости — скрыть родительский контейнер логотипа,
+   но без использования :has() и слишком широких селекторов */
+.flex.justify-center.gap-2.md\:justify-start {
+    display: none !important;
+}
+
+/* Убедимся, что аватар ассистента не скрыт (на всякий случай) */
+.assistant-avatar img,
+img[src*="logo_1.svg"],
+img[alt="assistant"] {
+    display: block !important;
+}
+
+/* ------------------------------------------------------------
+   3. Custom Sidebar Styles (used by custom.js)
+   ------------------------------------------------------------ */
+#custom-history-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 280px;
+    height: 100%;
+    background: #1e1e2f;
+    z-index: 9999;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+    overflow-y: auto;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+#custom-history-sidebar > div {
+    padding: 20px;
+    background: #1e1e2f;
+    color: white;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+#custom-history-sidebar h3 {
+    margin-top: 0;
+    text-align: center;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #444;
+    padding-bottom: 10px;
+}
+
+#chat-history-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+#chat-history-list li {
+    padding: 8px 12px;
+    margin-bottom: 4px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #ddd;
+    transition: background-color 0.2s, color 0.2s;
+    word-break: break-word;
+}
+
+#chat-history-list li:hover {
+    background-color: #2d2d3a;
+    color: white;
+}
+
+#chat-history-list li:first-child {
+    color: #aaa;
+    font-style: italic;
+    cursor: default;
+}
+#chat-history-list li:first-child:hover {
+    background-color: transparent;
+    color: #aaa;
+}
+
+#custom-hamburger {
+    position: fixed;
+    left: 15px;
+    top: 15px;
+    z-index: 10000;
+    background: #2c3e50;
+    color: white;
+    border: none;
+    font-size: 24px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+#custom-hamburger:hover {
+    background-color: #1e2a36;
+}
+
+#custom-hamburger:active {
+    transform: scale(0.96);
+}
+
+@media (prefers-color-scheme: dark) {
+    #custom-history-sidebar {
+        background: #0f0f1a;
+        box-shadow: 2px 0 12px rgba(0, 0, 0, 0.5);
+    }
+    #custom-history-sidebar > div {
+        background: #0f0f1a;
+    }
+    #chat-history-list li:hover {
+        background-color: #2a2a35;
+    }
+}
+
+@media (max-width: 640px) {
+    #custom-history-sidebar {
+        width: 85%;
+        max-width: 280px;
+    }
+}
