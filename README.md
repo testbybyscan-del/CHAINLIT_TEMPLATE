@@ -372,6 +372,9 @@ docker volume prune -f
 ## 🤝 Контакты
 
 По всем вопросам, связанным с деплоем, настройкой или кастомизацией, обращайтесь в Telegram: [@Bybyscan](https://t.me/Bybyscan).
+# Благодарности
+
+Отдельное спасибо IlyaGusev за [akdengi/saiga-llama3-8b](https://ollama.com/akdengi/saiga-llama3-8b) !
 
 ---
 
