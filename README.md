@@ -446,7 +446,7 @@ docker volume prune -f
 
 ## Благодарности
 
-Отдельное спасибо [Ilya Gusev](https://ollama.com/akdengi/saiga-llama3-8b) за отличную модель.
+Отдельное спасибо [Ilya Gusev](https://ollama.com/akdengi/saiga-llama3-8b) за отлично дообученную модель.
 
 ---
 
