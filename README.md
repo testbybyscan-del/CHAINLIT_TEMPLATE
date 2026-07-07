@@ -1,4 +1,3 @@
-```markdown
 # README для деплоя Chainlit (версия 0.4.2)
 
 Этот проект содержит **автоматизированный скрипт деплоя** для развёртывания **Chainlit** (UI: чат с LLM) с полным стеком: PostgreSQL (pgvector), Ollama (LLM-сервер), History API и Nginx (HTTPS).  
@@ -452,4 +451,4 @@ docker volume prune -f
 ---
 
 **Удачи в деплое! 🚀**
-```
+
