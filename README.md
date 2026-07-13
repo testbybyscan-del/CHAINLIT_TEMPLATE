@@ -446,7 +446,7 @@ docker volume prune -f
 
 ## Благодарности
 
-- Спасибо [hackspace_it](https://t.me/hackspace_it) за свежие новости и поодержку !
+- Спасибо [hackspace_it](https://t.me/hackspace_it) за свежие новости и поддержку !
 - Отдельное спасибо [Ilya Gusev](https://ollama.com/akdengi/saiga-llama3-8b) за отлично дообученную модель.
 
 ---
